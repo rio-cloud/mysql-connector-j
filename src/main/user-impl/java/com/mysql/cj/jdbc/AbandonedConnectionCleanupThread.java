@@ -79,15 +79,17 @@ public class AbandonedConnectionCleanupThread implements Runnable {
     }
 
     public void run() {
+        System.out.println("OTC-MYSQL: Starting thread ...");
         for (;;) {
             try {
                 checkThreadContextClassLoader();
                 Reference<? extends MysqlConnection> reference = referenceQueue.remove(5000);
                 if (reference != null) {
                     finalizeResource((ConnectionFinalizerPhantomReference) reference);
-                    connectionFinalizerPhantomRefs.remove(reference);
                 }
             } catch (InterruptedException e) {
+                System.out.println("OTC-MYSQL: Thread died");
+                e.printStackTrace();
                 threadRefLock.lock();
                 try {
                     threadRef = null;
@@ -103,7 +105,8 @@ public class AbandonedConnectionCleanupThread implements Runnable {
                 }
                 return;
             } catch (Exception ex) {
-                // Nowhere to really log this.
+                System.out.println("OTC-MYSQL: Other Exception");
+                ex.printStackTrace();
             }
         }
     }
