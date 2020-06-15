@@ -40,6 +40,8 @@ import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
 import com.mysql.cj.MysqlConnection;
+import com.mysql.cj.log.Log;
+import com.mysql.cj.log.LogFactory;
 import com.mysql.cj.protocol.NetworkResources;
 
 /**
@@ -53,8 +55,10 @@ public class AbandonedConnectionCleanupThread implements Runnable {
     private static final ExecutorService cleanupThreadExcecutorService;
     private static Thread threadRef = null;
     private static Lock threadRefLock = new ReentrantLock();
+    private static Log logger;
 
     static {
+        logger = LogFactory.getLogger("Slf4JLogger", "OTC-MYSQL");
         cleanupThreadExcecutorService = Executors.newSingleThreadExecutor(r -> {
             Thread t = new Thread(r, "mysql-cj-abandoned-connection-cleanup");
             t.setDaemon(true);
@@ -79,6 +83,7 @@ public class AbandonedConnectionCleanupThread implements Runnable {
     }
 
     public void run() {
+        logger.logInfo("OTC-MYSQL: Starting thread ...");
         System.out.println("OTC-MYSQL: Starting thread ...");
         for (;;) {
             try {
@@ -88,8 +93,8 @@ public class AbandonedConnectionCleanupThread implements Runnable {
                     finalizeResource((ConnectionFinalizerPhantomReference) reference);
                 }
             } catch (InterruptedException e) {
-                System.out.println("OTC-MYSQL: Thread died");
-                e.printStackTrace();
+                logger.logInfo("OTC-MYSQL: Thread died");
+                logger.logError("OTC-MYSQL", e);
                 threadRefLock.lock();
                 try {
                     threadRef = null;
@@ -105,8 +110,8 @@ public class AbandonedConnectionCleanupThread implements Runnable {
                 }
                 return;
             } catch (Exception ex) {
-                System.out.println("OTC-MYSQL: Other Exception");
-                ex.printStackTrace();
+                logger.logInfo("OTC-MYSQL: Other Exception");
+                logger.logError("OTC-MYSQL", ex);
             }
         }
     }
